@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<title>선샤인 고아원 — 공포 방탈출</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#000;--ink:#d8cbb8;--dim:#8a7d6d;--blood:#9b1c1c;--glow:#ffd9a0;--panel:#120e0b;--line:#3a2c22}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:#000;color:var(--ink);font-family:"Noto Serif KR","Batang",serif;min-height:100vh}
+  body{display:flex;justify-content:center;padding:10px}
+  #app{width:100%;max-width:980px}
+  button{font:inherit;cursor:pointer;background:#1c1510;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:9px 14px}
+  button:hover:not(:disabled){border-color:#a07a4a;color:#fff}
+  button:disabled{opacity:.45;cursor:default}
+  button.primary{background:#7a1616;border-color:#a02525;color:#fff;font-weight:bold}
+  button.primary:hover{background:#9b1c1c}
+  input[type=text]{font:inherit;background:#050403;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:10px;width:200px;text-align:center;letter-spacing:4px}
+  #hud{display:flex;align-items:center;gap:12px;padding:4px 2px 8px;font-size:14px;color:var(--dim)}
+  #roomName{flex:1;color:var(--ink);letter-spacing:1px}
+  #fearBox{display:flex;align-items:center;gap:6px;font-size:12px}
+  #fear{width:110px;height:8px;background:#1a1210;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  #fear i{display:block;height:100%;width:0;background:linear-gradient(90deg,#6b1010,#e03030);transition:width .6s}
+  #timer{color:#c9a26a;font-variant-numeric:tabular-nums}
+
+  #stage{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#000;border:1px solid #2a1f18;border-radius:6px;box-shadow:0 0 40px rgba(120,20,20,.18);cursor:crosshair;touch-action:none;user-select:none}
+  #scene{position:absolute;inset:0;width:100%;height:100%}
+  .hot{fill:transparent;cursor:pointer}
+  .hot:hover{fill:rgba(255,220,150,.08);stroke:rgba(255,220,150,.55);stroke-width:1.5}
+  #dark{position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,230,180,.10) 0,transparent var(--r3,260px)),
+      radial-gradient(circle at var(--mx,50%) var(--my,50%),transparent 0,transparent var(--r1,55px),rgba(0,0,0,.55) var(--r2,150px),rgba(0,0,0,.95) var(--r3,270px));
+    animation:flick 7s infinite}
+  @keyframes flick{0%,100%{opacity:1}41%{opacity:1}42%{opacity:.86}43%{opacity:1}44%{opacity:.8}45%{opacity:1}78%{opacity:1}79%{opacity:.9}80%{opacity:1}}
+  #vig{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 140px 40px rgba(0,0,0,.9)}
+  #grain{position:absolute;inset:-50%;pointer-events:none;opacity:.09;mix-blend-mode:screen;animation:gr .5s steps(5) infinite;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>")}
+  @keyframes gr{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-2%)}100%{transform:translate(3%,3%)}}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .12s}
+  #redtint{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,transparent 40%,rgba(130,0,0,.5));opacity:0;transition:opacity 1s}
+  #tip{position:absolute;pointer-events:none;background:rgba(0,0,0,.75);border:1px solid #6b5338;color:#f1dfc2;font-size:12px;padding:3px 8px;border-radius:4px;opacity:0;transform:translate(10px,-30px);white-space:nowrap}
+
+  #ghost{position:absolute;bottom:6%;height:58%;pointer-events:none;opacity:0;transition:left 2s ease-in-out,opacity .8s,height 2s;filter:blur(.6px) drop-shadow(0 0 14px rgba(200,220,255,.35))}
+  #ghost svg{height:100%;width:auto;animation:sway 4s ease-in-out infinite}
+  @keyframes sway{50%{transform:translateX(5px) skewX(-1.5deg)}}
+  #ghost.blink{animation:gblink .35s steps(2) 3}
+  @keyframes gblink{50%{opacity:0}}
+
+  #scare{position:absolute;inset:0;background:#000;display:none;align-items:center;justify-content:center;z-index:30}
+  #scare.on{display:flex;animation:shk .08s linear infinite}
+  #scare svg{height:105%;filter:contrast(1.4)}
+  @keyframes shk{0%{transform:translate(0,0)}25%{transform:translate(-8px,5px)}50%{transform:translate(7px,-6px)}75%{transform:translate(-5px,-5px)}}
+  .shake{animation:shk .12s linear 3}
+
+  #narr{min-height:64px;margin:10px 0 8px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--blood);border-radius:6px;line-height:1.65;font-size:15px;color:#e8dccb}
+  #bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #inv{display:flex;gap:6px;flex:1;min-height:42px;align-items:center;flex-wrap:wrap}
+  .item{background:#1a130e;border:1px solid #7a5a35;border-radius:8px;padding:4px 10px;font-size:13px;animation:in .5s}
+  .item b{font-size:20px;margin-right:4px;vertical-align:middle}
+  @keyframes in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;padding:12px;z-index:50}
+  #modal.on{display:flex}
+  #box{width:100%;max-width:620px;max-height:93vh;overflow:auto;background:linear-gradient(#17100b,#0d0907);border:1px solid #6b5338;border-radius:10px;padding:20px;box-shadow:0 0 60px rgba(0,0,0,.9)}
+  #box h2{margin:0 0 8px;font-size:20px;color:#f1dfc2;letter-spacing:1px}
+  .clue{background:#080605;border-left:3px solid #a07a4a;padding:10px 14px;margin:10px 0;border-radius:3px;line-height:1.7;font-size:15px;color:#e6d8c3}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #msg{min-height:22px;font-weight:bold;margin:8px 0 4px}
+  .ok{color:#6fcf97}.bad{color:#ff6b6b}.cen{text-align:center}
+  #seqShow{min-height:30px;margin:10px 0;font-size:20px;letter-spacing:3px}
+  .cb{width:54px;height:54px;border-radius:8px;border:2px solid rgba(255,255,255,.15);font-size:0}
+  .cb.round{border-radius:50%}
+  .note{width:52px;height:64px;font-size:15px;background:#e9e0cf;color:#222;border-radius:4px 4px 8px 8px;border:1px solid #999}
+  .note:hover:not(:disabled){background:#fff;color:#000}
+  .diffwrap{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .diffwrap svg{width:calc(50% - 4px);min-width:240px;border:2px solid #3a2c22;border-radius:4px;cursor:crosshair;filter:sepia(.75) contrast(1.1) brightness(.9)}
+  .cap{font-size:12px;color:var(--dim);text-align:center;margin:4px 0}
+  #notesList{padding-left:20px;font-size:14px;line-height:1.7;color:#cbbda8}
+
+  #intro,#end{position:fixed;inset:0;background:radial-gradient(#1a0f0b,#000 70%);z-index:100;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+  #end{display:none;z-index:90}
+  .title{font-size:clamp(34px,7vw,64px);font-weight:700;letter-spacing:6px;color:#c93a3a;text-shadow:0 0 18px rgba(200,40,40,.6);animation:tflick 5s infinite;margin:0 0 6px}
+  @keyframes tflick{0%,92%,100%{opacity:1}93%{opacity:.3}94%{opacity:1}96%{opacity:.5}97%{opacity:1}}
+  .sub{color:var(--dim);letter-spacing:3px;margin-bottom:26px}
+
+  /* ===== 모바일 / 세로 화면 ===== */
+  .pan{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:84px;z-index:5;background:rgba(0,0,0,.45);border:1px solid rgba(255,220,150,.35);color:#f1dfc2;font-size:22px;padding:0;display:none;align-items:center;justify-content:center;touch-action:manipulation}
+  #panL{left:0;border-radius:0 12px 12px 0}
+  #panR{right:0;border-radius:12px 0 0 12px}
+  .pan.dis{opacity:.15;pointer-events:none}
+  .pan.on{display:flex;animation:panpulse 2s ease-in-out 3}
+  @keyframes panpulse{50%{background:rgba(255,200,120,.35)}}
+  button{touch-action:manipulation}
+  @media (orientation:portrait){
+    body{padding:6px}
+    #stage{aspect-ratio:3/4}
+    #hud{gap:8px;font-size:13px;padding:2px 0 6px}
+    #fear{width:70px}
+    #fearBox{font-size:11px}
+    #narr{font-size:14px;padding:10px 12px;margin:8px 0 6px;min-height:84px}
+    #bar{gap:6px}
+    .item{font-size:12px;padding:3px 8px}
+    #box{padding:16px;max-height:92dvh}
+    #box h2{font-size:18px}
+    button{min-height:44px}
+    .cb{width:56px;height:56px}
+    .note{width:42px;height:66px;font-size:14px}
+    .diffwrap svg{width:100%}
+    input[type=text]{font-size:18px;width:170px;min-height:46px}
+    #hud button{min-height:38px;padding:6px 10px}
+  }
+  @media (max-width:420px){ #roomName{font-size:13px} .note{width:38px} }
+  .tapnote{display:none}
+  @media (hover:none){ .tapnote{display:inline} .hot:hover{fill:transparent;stroke:none} }
+  .warn{color:#8a7d6d;font-size:13px;line-height:1.8;margin:18px 0 22px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <span id="roomName">—</span>
+    <span id="fearBox">공포 <span id="fear"><i></i></span></span>
+    <span id="timer">00:00</span>
+    <button id="muteBtn" title="소리">🔊</button>
+    <button id="notesBtn" title="수첩">📒</button>
+  </div>
+  <div id="stage">
+    <svg id="scene" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice"></svg>
+    <div id="ghost"></div>
+    <div id="dark"></div>
+    <div id="redtint"></div>
+    <div id="vig"></div>
+    <div id="grain"></div>
+    <div id="flash"></div>
+    <div id="tip"></div>
+    <button class="pan" id="panL" aria-label="왼쪽으로">◀</button>
+    <button class="pan" id="panR" aria-label="오른쪽으로">▶</button>
+    <div id="scare"></div>
+  </div>
+  <div id="narr"></div>
+  <div id="bar"><div id="inv"></div></div>
+</div>
+
+<div id="modal"><div id="box"></div></div>
+
+<div id="intro"><div>
+  <h1 class="title">선샤인 고아원</h1>
+  <div class="sub">1987 — 폐쇄된 그날 이후</div>
+  <p style="line-height:1.9;max-width:520px;margin:0 auto;color:#cbbda8">
+    실종 사건을 취재하러 온 폐고아원. 현관문이 등 뒤에서 잠겼다.<br>
+    정전된 어둠 속, 손전등 하나뿐.<br>
+    누군가 <b style="color:#c93a3a">나를 지켜보고 있다.</b>
+  </p>
+  <p class="warn">🔦 마우스(또는 손가락)를 움직여 어둠을 비추세요.<br>
+    📱 휴대폰은 세로로 들고, 화면 양옆의 ◀ ▶ 버튼으로 방을 둘러보세요.<br>
+    🔊 소리를 켜고, 조용한 곳에서 플레이하세요.<br>
+    ⚠️ 놀라는 장면이 있습니다. 틀릴수록 '그것'이 가까이 다가옵니다.<br>
+    💡 힌트는 한 문제에서 5번 틀려야 볼 수 있습니다.</p>
+  <button class="primary" id="startBtn" style="padding:12px 34px;font-size:17px">안으로 들어간다</button>
+</div></div>
+<div id="end"><div id="endBody"></div></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const NEED_WRONG=5, MAX_FEAR=10;
+
+/* ===================== 오디오 ===================== */
+let AC,master,muted=false;
+function initAudio(){
+  if(AC) return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain(); master.gain.value=.85; master.connect(AC.destination);
+  const o1=AC.createOscillator(),o2=AC.createOscillator(),f=AC.createBiquadFilter(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();
+  o1.type=o2.type='sawtooth'; o1.frequency.value=46; o2.frequency.value=46.8;
+  f.type='lowpass'; f.frequency.value=170; g.gain.value=.08;
+  l.frequency.value=.11; lg.gain.value=80; l.connect(lg); lg.connect(f.frequency);
+  o1.connect(f); o2.connect(f); f.connect(g); g.connect(master);
+  [o1,o2,l].forEach(o=>o.start());
+  beatLoop();
+}
+function tone(freq,dur=.4,type='sine',vol=.12,delay=0,slideTo){
+  if(!AC) return; const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();
+  o.type=type; o.frequency.setValueAtTime(freq,t); if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,t+dur);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+.015); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+.05);
+}
+function noise(dur=.5,vol=.1,freq=800,type='lowpass',swell=false,delay=0){
+  if(!AC) return; const t=AC.currentTime+delay,n=AC.sampleRate*dur,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
+  const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain(); s.buffer=b; f.type=type; f.frequency.value=freq;
+  g.gain.setValueAtTime(swell?.001:vol,t); if(swell) g.gain.linearRampToValueAtTime(vol,t+dur*.6); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  s.connect(f); f.connect(g); g.connect(master); s.start(t);
+}
+const sfx={
+  click(){tone(900,.05,'square',.03)},
+  creak(){tone(110,.9,'sawtooth',.06,0,70); tone(160,.9,'sawtooth',.03,0,95); noise(.8,.04,500,'bandpass')},
+  good(){[523,659,784,1046].forEach((f,i)=>tone(f,1.1,'sine',.09,i*.12))},
+  bad(){tone(90,.5,'sawtooth',.12,0,50); tone(95,.5,'square',.06,0,55); noise(1.3,.09,1500,'bandpass',true)},
+  scare(){noise(.9,.5,3000,'highpass'); tone(900,.8,'sawtooth',.3,0,200); tone(1300,.8,'square',.15,0,260); tone(40,1,'sine',.5)},
+  thump(){tone(60,.16,'sine',.35,0,40); tone(55,.18,'sine',.28,.18,38)},
+  item(){tone(660,.3,'triangle',.1); tone(990,.5,'triangle',.08,.1)},
+  note(i){const F=[261.6,293.7,329.6,349.2,392,440,493.9];tone(F[i],1.3,'sine',.14); tone(F[i]*2,.9,'sine',.04)}
+};
+function beatLoop(){
+  if(!muted&&S.fear>0&&S.started) sfx.thump();
+  setTimeout(beatLoop,1400-S.fear*95);
+}
+
+/* ===================== 상태 ===================== */
+const S={room:'hall',items:new Set(),solved:new Set(),notes:[],wrongs:{},fear:0,hints:0,totalWrong:0,t0:0,started:false,over:false,scared:new Set(),timer:null};
+const ITEM={
+  kidKey:{i:'🗝️',n:'어린이방 열쇠'}, eye:{i:'👁️',n:'유리 눈'}, spring:{i:'⚙️',n:'태엽'},
+  cellarKey:{i:'🔑',n:'지하실 열쇠'}, body:{i:'🧸',n:'낡은 인형 몸통'}, doll:{i:'🪆',n:'완성된 인형'}
+};
+
+/* ===================== 그림(SVG) ===================== */
+const DEFS=`<defs>
+  <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2e2c27"/><stop offset="1" stop-color="#17140f"/></linearGradient>
+  <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b1d12"/><stop offset="1" stop-color="#0e0805"/></linearGradient>
+  <linearGradient id="kwall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3226"/><stop offset="1" stop-color="#201a13"/></linearGradient>
+  <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#25272a"/><stop offset="1" stop-color="#0f1011"/></linearGradient>
+  <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4b5258"/><stop offset=".5" stop-color="#6d767d"/><stop offset="1" stop-color="#3b4146"/></linearGradient>
+  <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a3322"/><stop offset="1" stop-color="#2a1a10"/></linearGradient>
+  <radialGradient id="moon" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#bcd7ff" stop-opacity=".5"/><stop offset="1" stop-color="#bcd7ff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="cglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffb347" stop-opacity=".7"/><stop offset="1" stop-color="#ff8c00" stop-opacity="0"/></radialGradient>
+  <pattern id="wp" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="#3a3024"/><rect width="20" height="40" fill="#352b20"/><circle cx="10" cy="12" r="2" fill="#4e4130"/><circle cx="30" cy="28" r="2" fill="#4e4130"/></pattern>
+</defs>`;
+const cobweb=(x,y,s=1,f=1)=>`<g stroke="#9aa" stroke-opacity=".25" fill="none" transform="translate(${x},${y}) scale(${f*s},${s})"><path d="M0 0 L60 0 M0 0 L0 60 M0 0 L45 45 M18 0 Q18 18 0 18 M34 0 Q34 34 0 34 M52 0 Q52 52 0 52"/></g>`;
+function hand(cx,cy,len,deg,w,col){const a=deg*Math.PI/180;return `<line x1="${cx}" y1="${cy}" x2="${cx+len*Math.sin(a)}" y2="${cy-len*Math.cos(a)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`}
+function floorLines(y0){let s='';for(let i=1;i<8;i++){const y=y0+i*i*2.3+i*5;s+=`<line x1="0" y1="${y}" x2="960" y2="${y}" stroke="#000" stroke-opacity=".4"/>`}
+  for(let x=-300;x<1300;x+=120) s+=`<line x1="${480+(x-480)*.45}" y1="${y0}" x2="${x}" y2="540" stroke="#000" stroke-opacity=".35"/>`;return s}
+
+function artHall(){
+  let s=`<rect width="960" height="390" fill="url(#wall)"/><rect y="262" width="960" height="128" fill="#1d1914"/>`;
+  for(let x=0;x<960;x+=60) s+=`<line x1="${x}" y1="262" x2="${x}" y2="390" stroke="#0a0806" stroke-width="2"/>`;
+  s+=`<rect y="256" width="960" height="8" fill="#31281f"/><ellipse cx="640" cy="50" rx="110" ry="40" fill="#000" opacity=".28"/>`;
+  s+=`<rect y="390" width="960" height="150" fill="url(#floor)"/>`+floorLines(390);
+  // 창문
+  s+=`<circle cx="215" cy="150" r="150" fill="url(#moon)"/><rect x="150" y="70" width="130" height="170" fill="#0b1520" stroke="#3b2f22" stroke-width="9"/>
+      <line x1="215" y1="70" x2="215" y2="240" stroke="#3b2f22" stroke-width="6"/><line x1="150" y1="155" x2="280" y2="155" stroke="#3b2f22" stroke-width="6"/>
+      <polygon points="170,390 270,390 340,540 110,540" fill="#a9c4ff" opacity=".07"/>
+      <path d="M150 70 Q165 140 150 240 L130 240 L130 70Z" fill="#2a1d1d" opacity=".9"/>`;
+  // 왼쪽 문
+  s+=`<rect x="14" y="156" width="88" height="236" fill="url(#wood)" stroke="#120b07" stroke-width="5"/><rect x="26" y="172" width="64" height="90" fill="none" stroke="#120b07" stroke-width="3"/><rect x="26" y="276" width="64" height="100" fill="none" stroke="#120b07" stroke-width="3"/>
+      <circle cx="88" cy="285" r="5" fill="#a08038"/><rect x="34" y="130" width="48" height="18" fill="#2a2018" stroke="#6b5338"/><text x="58" y="143" font-size="10" fill="#cdb98f" text-anchor="middle">어린이방</text>`;
+  // 시계
+  s+=`<circle cx="480" cy="115" r="48" fill="#cdbf9f" stroke="#3a2a1a" stroke-width="7"/>`;
+  for(let i=0;i<12;i++){const a=i*30*Math.PI/180;s+=`<line x1="${480+38*Math.sin(a)}" y1="${115-38*Math.cos(a)}" x2="${480+43*Math.sin(a)}" y2="${115-43*Math.cos(a)}" stroke="#2a1d12" stroke-width="3"/>`}
+  s+=hand(480,115,24,98.5,5,'#1c130c')+hand(480,115,36,102,3,'#1c130c')+`<circle cx="480" cy="115" r="4" fill="#7a1c1c"/><path d="M450 90 L470 110 M500 140 L510 160" stroke="#000" stroke-opacity=".5"/>`;
+  // 현관문(출구)
+  s+=`<rect x="395" y="168" width="170" height="232" fill="url(#wood)" stroke="#0d0805" stroke-width="7"/><line x1="480" y1="168" x2="480" y2="400" stroke="#0d0805" stroke-width="5"/>
+      <rect x="410" y="185" width="56" height="80" fill="none" stroke="#0d0805" stroke-width="3"/><rect x="494" y="185" width="56" height="80" fill="none" stroke="#0d0805" stroke-width="3"/>
+      <line x1="395" y1="240" x2="565" y2="330" stroke="#666" stroke-width="7"/><line x1="565" y1="240" x2="395" y2="330" stroke="#666" stroke-width="7"/>
+      <rect x="462" y="270" width="36" height="34" rx="5" fill="#7b6a35" stroke="#2a220d" stroke-width="3"/><path d="M468 270 V258 a12 12 0 0 1 24 0 V270" fill="none" stroke="#aaa" stroke-width="5"/>`;
+  // 신문 코르크판
+  s+=`<rect x="615" y="92" width="140" height="112" fill="#5a4129" stroke="#2a1d10" stroke-width="5"/><rect x="632" y="104" width="82" height="88" fill="#cfc5ac" transform="rotate(-3 672 148)"/>
+      <rect x="640" y="112" width="66" height="9" fill="#2b2b2b" transform="rotate(-3 672 148)"/>`;
+  for(let i=0;i<6;i++) s+=`<line x1="640" y1="${130+i*9}" x2="706" y2="${130+i*9}" stroke="#777" stroke-width="2" transform="rotate(-3 672 148)"/>`;
+  s+=`<rect x="720" y="120" width="24" height="30" fill="#bfae8b"/><circle cx="672" cy="98" r="3" fill="#a00"/>`;
+  // 캐비닛
+  s+=`<rect x="772" y="162" width="122" height="230" fill="url(#steel)" stroke="#1a1d20" stroke-width="5"/><line x1="833" y1="162" x2="833" y2="392" stroke="#1a1d20" stroke-width="4"/>
+      <rect x="795" y="235" width="30" height="40" rx="3" fill="#15181a"/><g fill="#7ed07e">${[0,1,2].map(r=>[0,1].map(c=>`<circle cx="${803+c*14}" cy="${244+r*11}" r="3"/>`).join('')).join('')}</g>
+      <rect x="788" y="180" width="40" height="22" fill="#d9d2b8"/><text x="808" y="195" font-size="9" fill="#222" text-anchor="middle">YYMMDD</text>
+      <path d="M845 330 l20 30 l-6 6" stroke="#6b1c1c" stroke-width="3" fill="none" opacity=".7"/>`;
+  // 책상 + 방명록
+  s+=`<rect x="222" y="322" width="170" height="14" fill="url(#wood)"/><rect x="230" y="336" width="10" height="56" fill="#2a1a10"/><rect x="374" y="336" width="10" height="56" fill="#2a1a10"/>
+      <rect x="262" y="302" width="76" height="22" fill="#5a1717" stroke="#1a0808" stroke-width="2"/><rect x="266" y="308" width="68" height="3" fill="#b9a574"/>
+      <path d="M345 322 q10 -20 6 -30 q-8 12 -6 30" fill="#d8c8a0" opacity=".5"/>`;
+  // 지하실 해치
+  s+=`<path d="M600 432 L742 432 L760 505 L582 505 Z" fill="#2c1c10" stroke="#0e0805" stroke-width="4"/><line x1="671" y1="432" x2="671" y2="505" stroke="#0e0805" stroke-width="3"/>
+      <circle cx="671" cy="468" r="9" fill="none" stroke="#9a8650" stroke-width="4"/>`;
+  s+=cobweb(0,0)+cobweb(960,0,1,-1)+cobweb(300,0,.6);
+  return s;
+}
+
+function artKids(){
+  let s=`<rect width="960" height="390" fill="url(#wp)"/><rect width="960" height="390" fill="#000" opacity=".4"/><rect y="300" width="960" height="90" fill="#251d15"/><rect y="296" width="960" height="7" fill="#3a2d20"/>`;
+  s+=`<rect y="390" width="960" height="150" fill="url(#floor)"/>`+floorLines(390);
+  s+=`<path d="M0 0 C40 120 30 200 70 390 L0 390Z" fill="#2c1a1a" opacity=".35"/>`;
+  // 침대
+  s+=`<rect x="50" y="268" width="260" height="30" fill="#2a1c12"/><rect x="50" y="298" width="10" height="100" fill="#1f140c"/><rect x="300" y="298" width="10" height="100" fill="#1f140c"/>
+      <rect x="55" y="280" width="250" height="40" rx="8" fill="#4a3c3c"/><rect x="62" y="270" width="80" height="22" rx="8" fill="#6b6050"/>
+      <path d="M70 320 Q120 345 180 318 Q240 350 300 320 L300 345 L70 345Z" fill="#3a2f2f"/><rect x="50" y="215" width="10" height="90" fill="#1f140c"/>
+      <path d="M140 330 q10 -40 40 -20" stroke="#000" stroke-opacity=".5" fill="none" stroke-width="3"/>`;
+  // 창문+커튼
+  s+=`<circle cx="860" cy="160" r="130" fill="url(#moon)" opacity=".8"/><rect x="800" y="90" width="120" height="150" fill="#0b1520" stroke="#2f241a" stroke-width="8"/>
+      <path d="M800 90 Q830 150 805 240 L780 240 L780 90Z" fill="#4b2d33"/><path d="M920 90 Q895 150 915 240 L940 240 L940 90Z" fill="#4b2d33"/>`;
+  // 사진 액자
+  s+=`<rect x="372" y="118" width="116" height="92" fill="#6b5338" stroke="#2a1d10" stroke-width="5" transform="rotate(-2 430 164)"/><rect x="384" y="130" width="92" height="68" fill="#bfae8b" transform="rotate(-2 430 164)"/>
+      <g fill="#443a2c" transform="rotate(-2 430 164)">${[0,1,2,3,4].map(i=>`<circle cx="${396+i*17}" cy="160" r="6"/><rect x="${391+i*17}" y="166" width="10" height="24" rx="3"/>`).join('')}</g>`;
+  // 장난감 상자
+  s+=`<rect x="395" y="335" width="150" height="76" fill="url(#wood)" stroke="#120b07" stroke-width="4"/><rect x="395" y="335" width="150" height="14" fill="#3a2616"/>
+      <rect x="415" y="318" width="28" height="28" fill="#b03030" transform="rotate(-8 430 330)"/><rect x="450" y="312" width="28" height="28" fill="#3050b0" transform="rotate(6 465 326)"/><rect x="485" y="320" width="28" height="28" fill="#c9b030" transform="rotate(-4 500 334)"/>
+      <text x="470" y="385" font-size="13" fill="#d8c8a0" text-anchor="middle" opacity=".6">TOYS</text>`;
+  // 선반+오르골
+  s+=`<rect x="585" y="205" width="190" height="9" fill="url(#wood)"/><rect x="590" y="214" width="6" height="22" fill="#2a1a10"/><rect x="764" y="214" width="6" height="22" fill="#2a1a10"/>
+      <rect x="610" y="165" width="80" height="40" rx="4" fill="#6a3d2a" stroke="#1d0f08" stroke-width="3"/><rect x="618" y="172" width="64" height="8" fill="#a08038"/>
+      <circle cx="650" cy="163" r="11" fill="#d8c8a0"/><path d="M650 152 v-14" stroke="#caa" stroke-width="2"/>
+      <rect x="715" y="180" width="30" height="25" fill="#3a3a3a"/><circle cx="730" cy="172" r="9" fill="#ccc" opacity=".5"/>`;
+  // 크레용 그림
+  s+=`<rect x="590" y="248" width="150" height="104" fill="#d4c9ae" transform="rotate(2 665 300)" stroke="#5a4129" stroke-width="4"/>
+      <g transform="rotate(2 665 300)"><rect x="615" y="290" width="46" height="38" fill="#d03030"/><polygon points="610,290 638,262 666,290" fill="#5030b0"/><circle cx="715" cy="272" r="13" fill="#e8c830"/>
+      <path d="M690 345 h40" stroke="#30a050" stroke-width="6"/><circle cx="692" cy="320" r="7" fill="none" stroke="#000" stroke-width="2"/><path d="M692 327 v14 M684 332 h16" stroke="#000" stroke-width="2"/></g>`;
+  // 낙서 벽
+  s+=`<g fill="none" stroke="#7a1f1f" stroke-width="3" stroke-linecap="round" opacity=".8"><path d="M815 270 q15 -25 30 0 t30 0 t30 0"/><path d="M810 305 q18 -22 34 0 t34 0"/></g>
+      <text x="820" y="345" font-size="22" fill="#7a1f1f" font-style="italic" opacity=".85">♪ ♩ ♫ ♪</text>`;
+  // 곰인형
+  s+=`<g transform="translate(335,415)"><ellipse cx="0" cy="30" rx="32" ry="14" fill="#000" opacity=".4"/><circle cx="-16" cy="-26" r="9" fill="#5a3d28"/><circle cx="16" cy="-26" r="9" fill="#5a3d28"/><circle cx="0" cy="-14" r="22" fill="#6b4a32"/>
+      <ellipse cx="0" cy="22" rx="24" ry="24" fill="#5e3f2a"/><circle cx="-8" cy="-16" r="3" fill="#000"/><circle cx="8" cy="-16" r="3" fill="#000"/><path d="M-6 -6 q6 4 12 0" stroke="#000" stroke-width="2" fill="none"/>
+      <path d="M-10 -22 l-4 4 m4 0 l-4 -4" stroke="#111" stroke-width="1.5"/></g>`;
+  // 출구 문 (오른쪽 가장자리)
+  s+=`<rect x="888" y="170" width="64" height="228" fill="url(#wood)" stroke="#120b07" stroke-width="5"/><circle cx="900" cy="290" r="5" fill="#a08038"/>`;
+  s+=cobweb(0,0)+cobweb(960,0,1,-1);
+  return s;
+}
+
+function artCellar(lit){
+  let s=`<rect width="960" height="540" fill="url(#stone)"/>`;
+  for(let y=0;y<400;y+=36){ for(let x=((y/36)%2)*40-40;x<960;x+=80) s+=`<rect x="${x+3}" y="${y+3}" width="74" height="30" fill="#1b1d20" stroke="#0b0c0d" stroke-width="2" rx="2"/>`}
+  s+=`<rect y="400" width="960" height="140" fill="#0b0b0c"/><ellipse cx="480" cy="480" rx="360" ry="40" fill="#1a1212" opacity=".6"/>`;
+  s+=`<path d="M300 400 Q480 340 660 400" stroke="#3b0d0d" stroke-width="3" fill="none" opacity=".6"/><circle cx="480" cy="400" r="150" fill="none" stroke="#4b1010" stroke-width="2" opacity=".5"/>`;
+  // 파이프
+  s+=`<rect x="0" y="60" width="960" height="16" fill="#2b2e31"/><rect x="0" y="56" width="960" height="4" fill="#44494d"/><path d="M180 76 v60" stroke="#2b2e31" stroke-width="12"/>
+      <path d="M700 76 Q705 120 698 150" stroke="#444" stroke-width="2" fill="none"/><circle cx="698" cy="156" r="3" fill="#7ab" opacity=".6"/>`;
+  // 계단 (위로)
+  for(let i=0;i<7;i++) s+=`<rect x="${16+i*7}" y="${300-i*22}" width="${100-i*7}" height="${130-i*8+ i*2}" fill="#181a1c" stroke="#0a0a0b" stroke-width="3"/>`;
+  s+=`<polygon points="16,430 116,430 116,170 16,300" fill="#101213" opacity=".5"/><rect x="16" y="130" width="100" height="14" fill="#7a8"/><text x="66" y="141" font-size="11" fill="#111" text-anchor="middle">1층 ↑</text>`;
+  // 왼쪽 벽 낙서
+  s+=`<g fill="#8a1c1c" font-style="italic" opacity=".9" font-size="19"><text x="150" y="190" transform="rotate(-4 150 190)">붉은 초는 마지막에 불을 붙인다</text><text x="160" y="240" transform="rotate(3 160 240)">파란 초 바로 다음이 하얀 초</text></g>
+      <path d="M150 200 h250 M160 252 h220" stroke="#4a0e0e" stroke-width="2" opacity=".5"/>`;
+  // 오른쪽 낙서
+  s+=`<g fill="#8a1c1c" font-style="italic" opacity=".9" font-size="19"><text x="620" y="190" transform="rotate(2 620 190)">초록 초는 하얀 초의 다음</text><text x="610" y="236" transform="rotate(-3 610 236)">노랑 초는 초록과 빨강 사이</text></g>`;
+  // 제단
+  s+=`<rect x="350" y="290" width="260" height="30" fill="#2d2f33" stroke="#0a0a0b" stroke-width="3"/><rect x="365" y="320" width="230" height="86" fill="#212326" stroke="#0a0a0b" stroke-width="3"/>
+      <path d="M420 345 l20 -14 l20 14 l-20 18z M500 345 h40" stroke="#5b1313" stroke-width="3" fill="none" opacity=".8"/>`;
+  const cols=['#3b6fd1','#e8e8e8','#3fa860','#e6c84a','#c42a2a'],hs=[34,40,30,44,36];
+  cols.forEach((c,i)=>{const x=382+i*46;s+=`<rect x="${x}" y="${290-hs[i]}" width="16" height="${hs[i]}" fill="${c}" stroke="#111" stroke-width="1.5"/>`;
+    if(lit) s+=`<circle cx="${x+8}" cy="${280-hs[i]}" r="26" fill="url(#cglow)"/><path d="M${x+8} ${288-hs[i]} q-6 -10 0 -20 q6 10 0 20" fill="#ffd060"/>`});
+  // 보일러
+  s+=`<rect x="720" y="230" width="150" height="180" rx="14" fill="#2a2d2f" stroke="#0b0c0d" stroke-width="4"/><circle cx="795" cy="290" r="26" fill="#151617" stroke="#555" stroke-width="3"/><path d="M795 290 l12 -14" stroke="#c33" stroke-width="3"/>
+      <rect x="745" y="345" width="100" height="40" fill="#161718"/><rect x="760" y="352" width="70" height="8" fill="#9aa" opacity=".4"/><path d="M730 250 v140" stroke="#000" stroke-opacity=".4" stroke-width="3"/>`;
+  s+=cobweb(0,0,1.3)+cobweb(960,0,1.3,-1);
+  return s;
+}
+
+const GHOST_SVG=`<svg viewBox="0 0 120 300" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9edf5"/><stop offset="1" stop-color="#9aa5b8" stop-opacity=".1"/></linearGradient></defs>
+  <path d="M60 128 L18 290 Q60 305 102 290Z" fill="url(#gd)"/>
+  <path d="M32 55 Q28 20 60 14 Q94 20 88 55 L92 190 Q84 160 82 120 L38 120 Q36 160 28 190Z" fill="#050505"/>
+  <ellipse cx="60" cy="62" rx="22" ry="28" fill="#d9dde6"/>
+  <path d="M38 40 Q60 22 82 40 Q70 50 60 46 Q48 50 38 40Z" fill="#050505"/>
+  <ellipse cx="51" cy="64" rx="5" ry="8" fill="#000"/><ellipse cx="69" cy="64" rx="5" ry="8" fill="#000"/>
+  <path d="M52 82 q8 6 16 0" stroke="#400" stroke-width="2" fill="none"/>
+  <path d="M42 128 Q22 170 30 210 M78 128 Q98 170 92 210" stroke="#cfd5e0" stroke-width="7" fill="none" stroke-linecap="round"/></svg>`;
+const SCARE_SVG=`<svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="400" fill="#000"/>
+  <path d="M40 140 Q30 20 150 10 Q270 20 260 140 L275 400 L25 400Z" fill="#050505"/>
+  <ellipse cx="150" cy="170" rx="82" ry="108" fill="#d5d9df"/>
+  <path d="M70 120 Q150 60 230 120 Q190 130 150 118 Q110 130 70 120Z" fill="#050505"/>
+  <ellipse cx="115" cy="170" rx="18" ry="30" fill="#000"/><ellipse cx="185" cy="170" rx="18" ry="30" fill="#000"/>
+  <circle cx="115" cy="172" r="4" fill="#ff2020"/><circle cx="185" cy="172" r="4" fill="#ff2020"/>
+  <path d="M105 245 Q150 310 195 245 Q150 270 105 245Z" fill="#3a0000"/>
+  <path d="M120 255 l6 20 l6 -18 l8 22 l8 -22 l6 18 l6 -20" stroke="#ddd" stroke-width="3" fill="none"/>
+  <path d="M95 215 q-6 40 -2 80 M205 215 q6 40 2 80" stroke="#600" stroke-width="3" fill="none"/></svg>`;
+
+/* ===================== 방 / 핫스팟 ===================== */
+const ROOMS={
+  hall:{name:'1층 — 현관 홀', art:()=>artHall(), hot:[
+    {id:'kdoor',x:14,y:156,w:88,h:236,label:'어린이방 문',act:()=>useDoor('kids','kidKey','어린이방 문은 잠겨 있다. 열쇠가 필요하다.')},
+    {id:'clock',x:432,y:68,w:96,h:96,label:'벽시계',act:()=>clue('🕰️ 벽시계',['시계는 3시 17분에 멈춰 있다.','유리 안쪽에서 무언가 긁는 소리가 들린 것 같다.'])},
+    {id:'exit',x:395,y:168,w:170,h:232,label:'현관문',act:()=>exitDoor()},
+    {id:'news',x:615,y:92,w:140,h:112,label:'신문 스크랩',act:()=>clue('📰 빛바랜 신문',['<b>선샤인 고아원, 폐쇄 — 1987년</b><br>아이들이 하나둘 사라진다는 소문이 끊이지 않았고, 결국 당국은 문을 닫았다.']) },
+    {id:'cab',x:772,y:162,w:122,h:230,label:'금속 캐비닛',act:()=>openPuzzle('cabinet')},
+    {id:'desk',x:222,y:296,w:170,h:96,label:'책상 위 방명록',act:()=>clue('📕 방명록',['마지막 장에 아이의 글씨로 적혀 있다.<br>「오늘 새 친구가 왔다. 이름은 <b>하윤</b>. 일곱 살.」','그 아래, 지워지지 않는 붉은 얼룩.','(뒤쪽 페이지는 찢겨 있다.)'])},
+    {id:'hatch',x:582,y:432,w:178,h:73,label:'바닥의 해치',act:()=>useDoor('cellar','cellarKey','바닥의 해치는 잠겨 있다. 열쇠 구멍이 있다.')}
+  ]},
+  kids:{name:'2층 — 어린이방', art:()=>artKids(), hot:[
+    {id:'bed',x:50,y:215,w:260,h:130,label:'침대',act:()=>clue('🛏️ 침대 밑 쪽지',['매트리스 사이에서 아이가 쓴 쪽지가 나왔다.','「블록 쌓기 규칙: 파랑 다음은 노랑. 노랑은 세 번째.」','쪽지 구석에 눌린 자국이 있다: <i>같이 놀자</i>'])},
+    {id:'photo',x:372,y:112,w:120,h:100,label:'단체 사진 액자',act:()=>openPuzzle('photos')},
+    {id:'toybox',x:395,y:312,w:150,h:100,label:'장난감 상자',act:()=>openPuzzle('blocks')},
+    {id:'shelf',x:585,y:130,w:190,h:90,label:'선반 위 오르골',act:()=>openPuzzle('musicbox')},
+    {id:'draw',x:588,y:244,w:156,h:112,label:'크레용 그림',act:()=>clue('🖍️ 아이의 그림',['빨간 집, 파란 지붕, 노란 해, 초록 풀밭. 그리고 풀밭 위의 막대 사람.','그림 한쪽에 삐뚤빼뚤 적혀 있다: <i>「빨강이 제일 먼저, 그다음은 파랑」</i>'])},
+    {id:'wallnote',x:800,y:250,w:150,h:110,label:'벽의 낙서',act:()=>clue('✍️ 벽의 낙서',['붉은 크레용으로 쓴 악보 같은 낙서.','<b>♪ 도 도 솔 솔 라 라 솔 ♪</b>','아래에 작게: <i>엄마가 매일 불러준 노래. 반짝반짝…</i>'])},
+    {id:'bear',x:300,y:370,w:70,h:70,label:'곰인형',act:()=>clue('🧸 곰인형',['한쪽 눈이 없는 곰인형. 등 뒤 라벨에 이렇게 적혀 있다.','「블록 마지막은 초록. 꼭 지켜.」'])},
+    {id:'hdoor',x:888,y:170,w:64,h:228,label:'아래층으로',act:()=>go('hall')}
+  ]},
+  cellar:{name:'지하실', art:()=>artCellar(S.solved.has('candles')), hot:[
+    {id:'altar',x:350,y:250,w:260,h:160,label:'제단',act:()=>altar()},
+    {id:'wl',x:140,y:160,w:290,h:110,label:'왼쪽 벽 낙서',act:()=>clue('✍️ 붉은 낙서 (왼쪽)',['「붉은 초는 마지막에 불을 붙인다」','「파란 초 바로 다음이 하얀 초」'])},
+    {id:'wr',x:600,y:160,w:300,h:100,label:'오른쪽 벽 낙서',act:()=>clue('✍️ 붉은 낙서 (오른쪽)',['「초록 초는 하얀 초의 다음」','「노랑 초는 초록과 빨강 사이」'])},
+    {id:'boiler',x:720,y:230,w:150,h:180,label:'보일러',act:()=>clue('🔥 낡은 보일러',['차갑게 식은 보일러. 뒤쪽 틈에서 아이의 웃음소리가 새어 나오는 것 같다.','……기분 탓이길 바란다.'])},
+    {id:'stairs',x:16,y:130,w:100,h:300,label:'위층으로',act:()=>go('hall')}
+  ]}
+};
+
+/* ===================== 퍼즐 정의 ===================== */
+const PZ={
+  cabinet:{type:'text',title:'🗄️ 금속 캐비닛',prompt:'6자리 번호',
+    intro:'캐비닛 키패드에 <b>YYMMDD</b>라는 라벨이 붙어 있다. 6자리를 입력해야 한다. 이 고아원이 <b>문을 닫은 날</b>이 열쇠일지도 모른다.',
+    answer:['870317'],hint:'폐쇄 연도 1987 → 87. 시계가 멈춘 3시 17분 → 3월 17일. 합치면 870317.',
+    ok:'철컥—! 캐비닛이 열렸다. 안에는 녹슨 <b>어린이방 열쇠</b>가 걸려 있다.',
+    give:'kidKey'},
+  blocks:{type:'seq',title:'🧱 장난감 상자',prompt:'블록 4개를 쌓는 순서',len:4,
+    intro:'상자 뚜껑에 블록 쌓기 홈이 4개 있다. 색 블록 6개 중 맞는 4개를 올바른 순서로 올려야 한다.',
+    buttons:[['purple','#7a3fb0'],['green','#2f9a55'],['orange','#d9822b'],['red','#c23030'],['yellow','#d9bf34'],['blue','#3257c4']],
+    answer:'red,blue,yellow,green',round:false,
+    hint:'빨강이 제일 먼저 → 파랑 다음은 노랑(세 번째) → 마지막은 초록. 빨강, 파랑, 노랑, 초록.',
+    ok:'블록이 맞물리며 바닥이 열렸다. 안에서 반짝이는 <b>유리 눈</b>이 굴러 나왔다.',give:'eye'},
+  photos:{type:'diff',title:'🖼️ 단체 사진',prompt:'두 사진에서 다른 곳 5개',
+    intro:'액자 뒤에서 같은 장소를 찍은 사진 두 장이 나왔다. 한 장은 그 사건 이전, 한 장은 이후. 다른 곳을 모두 눌러 보자.',
+    hint:'창문 커튼, 시계 바늘, 침대 위 인형, 열린 문 틈, 액자의 기울기를 비교해 보세요.',
+    ok:'사진 뒷면이 벗겨지며 작은 <b>태엽</b>이 떨어졌다. 뒷면에는 이렇게 적혀 있다: 「가운데 서 있던 아이, 하윤」',give:'spring',
+    note:'사진 뒷면: 「가운데 서 있던 아이, 하윤」'},
+  musicbox:{type:'seq',title:'🎶 오르골',prompt:'멜로디 7음',len:7,notes:true,req:'spring',lock:'오르골의 태엽 자리가 비어 있다. 맞는 태엽이 필요하다.',
+    intro:'태엽을 감자 오르골이 낡은 건반 소리를 낸다. 건반 7음으로 아이들이 부르던 노래를 연주해야 한다.',
+    buttons:[['0','도'],['1','레'],['2','미'],['3','파'],['4','솔'],['5','라'],['6','시']],
+    answer:'0,0,4,4,5,5,4',
+    hint:'벽의 낙서: 도 도 솔 솔 라 라 솔 — 반짝반짝 작은 별.',
+    ok:'오르골이 노래를 끝내자 바닥판이 열렸다. 안에서 <b>지하실 열쇠</b>가 나왔다. 어딘가에서 속삭임이 들린다 — “…같이 놀자.”',give:'cellarKey'},
+  candles:{type:'seq',title:'🕯️ 다섯 개의 초',prompt:'불을 붙이는 순서 (5개)',len:5,round:true,
+    intro:'제단 위에 색이 다른 초 다섯 개가 놓여 있다. 벽의 낙서가 순서를 알려주는 듯하다.',
+    buttons:[['red','#c42a2a'],['white','#e8e8e8'],['yellow','#e6c84a'],['blue','#3b6fd1'],['green','#3fa860']],
+    answer:'blue,white,green,yellow,red',
+    hint:'붉은 초가 마지막. 파랑 → 하얀 → 초록 → 노랑 → 빨강.',
+    ok:'다섯 개의 불꽃이 일제히 타오른다. 제단 아래 서랍이 열리고 <b>낡은 인형 몸통</b>이 나왔다. 눈이 있을 자리가 비어 있다.',give:'body'},
+  name:{type:'text',title:'🪆 소녀의 이름',prompt:'인형에게 불러 줄 이름 (한글 두 글자)',
+    intro:'완성된 인형을 제단에 올리자 촛불이 일제히 흔들린다. 등 뒤에서 아주 작은 목소리가 속삭인다. “…내 이름을, 불러줘.”',
+    answer:['하윤'],hint:'방명록의 마지막 입소자, 그리고 사진 뒷면에 적힌 이름.',ok:''}
+};
+
+/* ===================== UI 헬퍼 ===================== */
+const stage=$('#stage'), tip=$('#tip');
+let typeT;
+function narrate(t){
+  clearInterval(typeT); const el=$('#narr'); let i=0; el.innerHTML='';
+  const plain=t; const tmp=document.createElement('div'); tmp.innerHTML=t; const text=tmp.textContent;
+  if(text.length!==t.length){ el.innerHTML=t; return; }
+  typeT=setInterval(()=>{ el.textContent=plain.slice(0,++i); if(i>=plain.length) clearInterval(typeT); },22);
+}
+/* ---- 화면 크기 / 좌우 이동 (모바일 세로) ---- */
+let panX=0,VW=960,panAnim;
+function applyVB(){
+  $('#scene').setAttribute('viewBox',`${panX} 0 ${VW} 540`);
+  const wide=VW<950;
+  ['#panL','#panR'].forEach(s=>$(s).classList.toggle('on',wide));
+  $('#panL').classList.toggle('dis',panX<=1);
+  $('#panR').classList.toggle('dis',panX>=960-VW-1);
+}
+function layout(center){
+  const r=stage.getBoundingClientRect();
+  VW=Math.min(960,540*r.width/Math.max(r.height,1));
+  panX=center?(960-VW)/2:Math.max(0,Math.min(960-VW,panX));
+  const small=r.width<700;
+  const v=small?[44,108,190]:[55,150,270];
+  stage.style.setProperty('--r1',v[0]+'px'); stage.style.setProperty('--r2',v[1]+'px'); stage.style.setProperty('--r3',v[2]+'px');
+  $('#dark').style.setProperty('--r1',v[0]+'px'); $('#dark').style.setProperty('--r2',v[1]+'px'); $('#dark').style.setProperty('--r3',v[2]+'px');
+  applyVB();
+}
+function panTo(x){
+  x=Math.max(0,Math.min(960-VW,x)); const from=panX,t0=performance.now();
+  cancelAnimationFrame(panAnim);
+  const step=t=>{const k=Math.min(1,(t-t0)/320),e=1-Math.pow(1-k,3);panX=from+(x-from)*e;applyVB();if(k<1)panAnim=requestAnimationFrame(step)};
+  panAnim=requestAnimationFrame(step);
+}
+$('#panL').onclick=e=>{e.stopPropagation();sfx.click();panTo(panX-VW*.65)};
+$('#panR').onclick=e=>{e.stopPropagation();sfx.click();panTo(panX+VW*.65)};
+['#panL','#panR'].forEach(s=>$(s).addEventListener('pointerdown',e=>e.stopPropagation()));
+window.addEventListener('resize',()=>layout(false));
+window.addEventListener('orientationchange',()=>setTimeout(()=>layout(true),250));
+
+function setHot(reset){
+  const r=ROOMS[S.room];
+  if(reset) layout(true);
+  $('#roomName').textContent=r.name;
+  $('#scene').innerHTML=DEFS+r.art()+r.hot.map(h=>`<rect class="hot" data-id="${h.id}" data-l="${h.label}" x="${h.x}" y="${h.y}" width="${h.w}" height="${h.h}" rx="6"/>`).join('');
+  $('#scene').querySelectorAll('.hot').forEach(el=>{
+    el.addEventListener('click',()=>{ if(S.over) return; sfx.click(); r.hot.find(h=>h.id===el.dataset.id).act(); });
+    el.addEventListener('pointerenter',()=>{tip.textContent=el.dataset.l;tip.style.opacity=1});
+    el.addEventListener('pointerleave',()=>{tip.style.opacity=0});
+  });
+}
+function renderInv(){
+  $('#inv').innerHTML=[...S.items].map(k=>`<span class="item"><b>${ITEM[k].i}</b>${ITEM[k].n}</span>`).join('')||'<span style="color:var(--dim);font-size:13px">가진 물건 없음</span>';
+}
+function updateFear(){
+  $('#fear i').style.width=(S.fear/MAX_FEAR*100)+'%';
+  $('#redtint').style.opacity=Math.min(1,S.fear/MAX_FEAR*1.1);
+  const g=$('#ghost');
+  if(S.fear<2){g.style.opacity=0;return;}
+  g.innerHTML=GHOST_SVG;
+  const pos=[[8,'22%'],[18,'30%'],[28,'38%'],[40,'46%'],[52,'54%'],[62,'60%'],[70,'66%'],[76,'72%'],[80,'80%'],[84,'88%']][Math.min(S.fear,10)-1];
+  g.style.left=pos[0]+'%'; g.style.height=pos[1]; g.style.opacity=Math.min(.75,.15+S.fear*.07);
+  g.classList.remove('blink'); void g.offsetWidth; g.classList.add('blink');
+}
+function openModal(html){ $('#box').innerHTML=html; $('#modal').classList.add('on'); }
+function closeModal(){ $('#modal').classList.remove('on'); }
+$('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+function clue(title,lines){
+  lines.forEach(l=>addNote(title,l));
+  openModal(`<h2>${title}</h2>${lines.map(l=>`<div class="clue">${l}</div>`).join('')}<div style="text-align:right;margin-top:12px"><button id="cl">닫기</button></div>`);
+  $('#cl').onclick=closeModal;
+}
+function addNote(t,l){
+  const txt=`<b>${t.replace(/^\S+\s/,'')}</b> — ${l.replace(/<br>/g,' ')}`;
+  if(!S.notes.includes(txt)) S.notes.push(txt);
+}
+$('#notesBtn').onclick=()=>{
+  openModal(`<h2>📒 수첩</h2>${S.notes.length?`<ol id="notesList">${S.notes.map(n=>`<li>${n}</li>`).join('')}</ol>`:'<p style="color:var(--dim)">아직 적은 단서가 없다.</p>'}<div style="text-align:right;margin-top:12px"><button id="cl">닫기</button></div>`);
+  $('#cl').onclick=closeModal;
+};
+$('#muteBtn').onclick=()=>{ muted=!muted; if(master) master.gain.value=muted?0:.85; $('#muteBtn').textContent=muted?'🔇':'🔊'; };
+
+/* ===================== 게임 로직 ===================== */
+function giveItem(id){
+  S.items.add(id); sfx.item();
+  if(S.items.has('eye')&&S.items.has('body')){
+    S.items.delete('eye'); S.items.delete('body'); S.items.add('doll');
+    setTimeout(()=>{narrate('유리 눈을 인형 몸통에 끼워 넣었다. 인형이 나를 빤히 올려다본다. 눈동자가… 방금 움직인 것 같다.'); sfx.whisper&&0;},600);
+  }
+  renderInv();
+}
+function go(room){
+  if(S.over) return;
+  sfx.creak(); S.room=room; setHot(true); closeModal();
+  if(room==='hall') narrate('차가운 현관 홀. 어딘가에서 규칙적인 시계 소리가 난다. 멈춰 있는 시계에서…');
+  if(room==='kids') narrate('어린이방. 낡은 침대, 장난감, 벽에 가득한 낙서. 아이들 웃음소리가 벽 너머에서 메아리친다.');
+  if(room==='cellar'){ narrate('지하실. 곰팡내와 쇠 냄새. 제단 위에 초 다섯 개가 놓여 있다. 바닥에 그려진 붉은 원이 마치 나를 기다린 것 같다.');
+    if(!S.scared.has('cellar')){ S.scared.add('cellar'); setTimeout(()=>jumpscare(),2400); } }
+}
+function useDoor(room,key,lockMsg){
+  if(S.items.has(key)){ go(room); } else { sfx.creak(); narrate(lockMsg); }
+}
+function exitDoor(){
+  if(S.solved.has('name')) return win();
+  narrate('출구는 쇠사슬로 단단히 잠겨 있다. 자물쇠 안쪽에서… 누군가 아이의 목소리로 속삭인다. “가지 마. 같이 있자.”');
+}
+function altar(){
+  if(!S.solved.has('candles')) return openPuzzle('candles');
+  if(S.items.has('doll')) return openPuzzle('name');
+  if(S.solved.has('name')) return narrate('제단은 고요하다.');
+  narrate('제단 위 빈자리. 무언가를 올려놓아야 할 것 같다. 아직 인형이 완성되지 않았다.');
+}
+
+function openPuzzle(id){
+  const p=PZ[id];
+  if(S.solved.has(id)) return clue(p.title,['이미 해결했다.']);
+  if(p.req&&!S.items.has(p.req)){ sfx.creak(); narrate(p.lock); return; }
+  let body='';
+  if(p.type==='text') body=`<div class="row"><input type="text" id="ans" autocomplete="off" placeholder="입력"><button class="primary" id="go">확인</button></div>`;
+  if(p.type==='seq'){
+    const cls=p.notes?'note':('cb'+(p.round?' round':''));
+    body=`<div class="row">${p.buttons.map(([k,v])=>p.notes?`<button class="note" data-k="${k}">${v}</button>`:`<button class="${cls}" data-k="${k}" style="background:${v}">${k}</button>`).join('')}</div>
+      <div id="seqShow"></div><div class="row"><button id="clr">지우기</button><button class="primary" id="go">확인</button></div>`;
+  }
+  if(p.type==='diff') body=`<div class="diffwrap">${photoSVG(0)}${photoSVG(1)}</div><div id="seqShow" class="cen cap">찾은 개수: 0 / 5</div>`;
+  openModal(`<h2>${p.title}</h2><p style="line-height:1.7">${p.intro}</p><b>🔐 ${p.prompt}</b><div style="margin:12px 0">${body}</div><div id="msg"></div><button id="hintBtn" disabled></button><div id="hint"></div><div style="text-align:right;margin-top:12px"><button id="cl">닫기</button></div>`);
+  $('#cl').onclick=closeModal;
+  const st={seq:[],found:new Set()};
+  $('#hintBtn').onclick=()=>{ S.hints++; $('#hint').innerHTML=`<div class="clue">${p.hint}</div>`; };
+  const upd=()=>{ const w=S.wrongs[id]||0,b=$('#hintBtn'); if(!b) return; if(w>=NEED_WRONG){b.disabled=false;b.textContent='💡 힌트 보기'} else {b.disabled=true;b.textContent=`💡 힌트 (오답 ${w}/${NEED_WRONG}회 — ${NEED_WRONG}번 틀리면 열려요)`} };
+  upd();
+  const fail=(line)=>{ wrong(id,line); upd(); $('#msg').className='bad'; $('#msg').textContent='❌ 틀렸다… 뒤에서 무언가 움직이는 기척이 난다.'; };
+  if(p.type==='text'){
+    $('#ans').focus(); $('#ans').onkeydown=e=>{if(e.key==='Enter')$('#go').click()};
+    $('#go').onclick=()=>{ const v=$('#ans').value.trim().toLowerCase().replace(/\s+/g,''); if(p.answer.includes(v)) solved(id); else fail(); };
+  }
+  if(p.type==='seq'){
+    const names={};
+    document.querySelectorAll('#box [data-k]').forEach(b=>{ b.onclick=()=>{
+      if(st.seq.length>=p.len) return; st.seq.push(b.dataset.k);
+      if(p.notes) sfx.note(+b.dataset.k); else sfx.click();
+      $('#seqShow').textContent=st.seq.map(k=>p.notes?p.buttons[+k][1]:'●').join(' ');
+      if(!p.notes) $('#seqShow').innerHTML=st.seq.map(k=>`<span style="color:${p.buttons.find(x=>x[0]===k)[1]}">■</span>`).join(' ');
+    }});
+    $('#clr').onclick=()=>{st.seq=[];$('#seqShow').textContent='';};
+    $('#go').onclick=()=>{ if(st.seq.join(',')===p.answer) solved(id); else { fail(); st.seq=[]; $('#seqShow').textContent=''; } };
+  }
+  if(p.type==='diff'){
+    document.querySelectorAll('#box .photo').forEach(sv=>sv.addEventListener('click',e=>{
+      const r=sv.getBoundingClientRect(), x=(e.clientX-r.left)/r.width*400, y=(e.clientY-r.top)/r.height*260;
+      const idx=DZ.findIndex(z=>Math.hypot(x-z.x,y-z.y)<=z.r);
+      if(idx<0){ fail('그건 같은데…'); return; }
+      if(st.found.has(idx)) return;
+      st.found.add(idx);
+      document.querySelectorAll('#box .photo').forEach(s2=>s2.insertAdjacentHTML('beforeend',`<circle cx="${DZ[idx].x}" cy="${DZ[idx].y}" r="${DZ[idx].r}" fill="none" stroke="#e33" stroke-width="3"/>`));
+      sfx.click(); $('#seqShow').textContent=`찾은 개수: ${st.found.size} / 5`;
+      if(st.found.size===5) solved(id);
+    }));
+  }
+}
+
+function solved(id){
+  const p=PZ[id]; S.solved.add(id); sfx.good();
+  if(p.note) addNote(p.title,p.note);
+  if(p.give) giveItem(p.give);
+  if(id==='candles'||id==='name') setHot();
+  setHot_keep();
+  if(id==='name'){ closeModal(); return finalScene(); }
+  openModal(`<div class="cen"><h2 class="ok">✅ 풀었다</h2><p style="line-height:1.8">${p.ok}</p><button class="primary" id="okb">계속한다</button></div>`);
+  $('#okb').onclick=closeModal; narrate(p.ok.replace(/<[^>]+>/g,''));
+}
+function setHot_keep(){ if(S.room==='cellar') setHot(); }
+
+function wrong(id,line){
+  S.wrongs[id]=(S.wrongs[id]||0)+1; S.totalWrong++; S.fear=Math.min(MAX_FEAR,S.fear+1);
+  sfx.bad(); updateFear();
+  $('#box').classList.remove('shake'); void $('#box').offsetWidth; $('#box').classList.add('shake');
+  if(S.fear===4||S.fear===7) setTimeout(jumpscare,600);
+  if(S.fear>=MAX_FEAR) setTimeout(caught,900);
+}
+
+function jumpscare(){
+  if(S.over) return;
+  closeModal();
+  sfx.scare();
+  const f=$('#flash'); f.style.opacity=1; setTimeout(()=>f.style.opacity=0,120);
+  const sc=$('#scare'); sc.innerHTML=SCARE_SVG; sc.classList.add('on');
+  setTimeout(()=>sc.classList.remove('on'),650);
+  setTimeout(()=>narrate('…방금, 분명히 얼굴이 보였다.'),800);
+}
+
+/* ===================== 틀린그림 ===================== */
+const DZ=[{x:85,y:95,r:34},{x:200,y:62,r:30},{x:110,y:150,r:28},{x:335,y:135,r:38},{x:270,y:66,r:26}];
+function photoSVG(v){
+  let s=`<svg class="photo" viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="260" fill="#c8b89a"/><rect y="200" width="400" height="60" fill="#8a7550"/>
+    <rect x="40" y="40" width="90" height="110" fill="#6f87a0" stroke="#4a3a22" stroke-width="5"/>`;
+  if(!v) s+=`<path d="M40 40 L85 40 Q70 95 85 150 L40 150Z" fill="#8a4b4b"/>`;
+  s+=`<circle cx="200" cy="62" r="24" fill="#efe6cf" stroke="#4a3a22" stroke-width="4"/>`;
+  s+= v? `<line x1="200" y1="62" x2="200" y2="44" stroke="#222" stroke-width="3"/><line x1="200" y1="62" x2="182" y2="62" stroke="#222" stroke-width="3"/>`
+        : `<line x1="200" y1="62" x2="200" y2="44" stroke="#222" stroke-width="3"/><line x1="200" y1="62" x2="216" y2="62" stroke="#222" stroke-width="3"/>`;
+  s+=`<rect x="60" y="160" width="160" height="60" fill="#6b5a46" stroke="#3a2c1c" stroke-width="3"/><rect x="66" y="152" width="60" height="16" rx="6" fill="#ddd0b3"/>`;
+  if(!v) s+=`<circle cx="110" cy="146" r="9" fill="#a0724e"/><rect x="102" y="152" width="16" height="16" rx="4" fill="#8f5f3d"/>`;
+  s+=`<rect x="300" y="60" width="70" height="150" fill="${v?'#1a120c':'#6e5338'}" stroke="#3a2a18" stroke-width="5"/>`;
+  if(v) s+=`<ellipse cx="336" cy="105" rx="10" ry="12" fill="#ccc"/><rect x="326" y="115" width="20" height="60" rx="8" fill="#bbb"/><circle cx="333" cy="103" r="2" fill="#000"/><circle cx="340" cy="103" r="2" fill="#000"/>`;
+  else s+=`<circle cx="312" cy="135" r="4" fill="#caa14a"/>`;
+  s+=`<g transform="rotate(${v?14:0} 270 66)"><rect x="252" y="43" width="36" height="46" fill="#7a6040" stroke="#3a2a18" stroke-width="3"/><rect x="258" y="49" width="24" height="34" fill="#d6c7a3"/></g>`;
+  s+=`<ellipse cx="200" cy="232" rx="70" ry="12" fill="#4a3a28" opacity=".6"/><rect x="0" y="0" width="400" height="260" fill="none" stroke="#2a1d10" stroke-width="8"/></svg>`;
+  return s;
+}
+
+/* ===================== 엔딩 ===================== */
+function finalScene(){
+  S.over=true; clearInterval(S.timer);
+  sfx.good();
+  narrate('“…하윤.” 이름을 부르자 촛불이 한꺼번에 흔들렸다. 아주 작은 손이 인형을 안아 올린다.');
+  setTimeout(()=>{ updateFearReset(); },1200);
+  setTimeout(()=>{ S.over=false; S.solved.add('name'); narrate('소녀는 희미하게 웃고는 빛 속으로 사라졌다. 위층에서 쇠사슬이 풀리는 소리가 들린다. 이제 현관으로 나가자.'); setHot(); },4200);
+}
+function updateFearReset(){ S.fear=0; updateFear(); $('#ghost').style.opacity=0; }
+function win(){
+  S.over=true; clearInterval(S.timer); sfx.creak();
+  const t=$('#timer').textContent;
+  setTimeout(()=>{
+    $('#end').style.display='flex';
+    $('#endBody').innerHTML=`<h1 class="title" style="color:#f2e3c0;text-shadow:0 0 24px rgba(255,230,170,.6)">탈출</h1>
+      <p style="line-height:1.9;max-width:520px;margin:0 auto 14px;color:#d8cbb8">문이 열리고 새벽빛이 쏟아져 들어온다.<br>등 뒤에서 아이의 웃음소리가 아주 멀리서, 평화롭게 들렸다.<br>선샤인 고아원의 마지막 아이는 이제 집에 갔다.</p>
+      <p style="color:#c9a26a">걸린 시간 ${t} · 틀린 횟수 ${S.totalWrong}회 · 사용한 힌트 ${S.hints}회</p>
+      <p style="color:#8a7d6d;font-size:13px">엔딩: 소녀의 이름을 불러 준 사람</p>
+      <button class="primary" id="again" style="margin-top:12px;padding:11px 28px">다시 하기</button>`;
+    $('#again').onclick=()=>location.reload();
+  },800);
+}
+function caught(){
+  if(S.over) return; S.over=true; clearInterval(S.timer); closeModal(); jumpscare();
+  setTimeout(()=>{
+    $('#end').style.display='flex';
+    $('#endBody').innerHTML=`<h1 class="title">잡혔다</h1>
+      <p style="line-height:1.9;max-width:520px;margin:0 auto 14px;color:#cbbda8">손전등이 꺼졌다.<br>어둠 속에서 작은 손이 내 손목을 잡는다.<br>“…이제 같이 놀자.”</p>
+      <p style="color:#8a7d6d;font-size:13px">엔딩: 영원히 같이 노는 사람 (틀린 횟수 ${S.totalWrong}회)</p>
+      <button class="primary" id="again" style="margin-top:12px;padding:11px 28px">다시 도전</button>`;
+    $('#again').onclick=()=>location.reload();
+  },1400);
+}
+
+/* ===================== 시작 ===================== */
+function tick(){ const s=Math.floor((Date.now()-S.t0)/1000); $('#timer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+function moveLight(e){
+  const r=stage.getBoundingClientRect(); const x=e.clientX-r.left;
+  // 터치할 때는 손가락에 가리지 않도록 불빛을 손가락 위쪽에 띄운다
+  const y=e.clientY-r.top-(e.pointerType==='touch'?64:0);
+  stage.style.setProperty('--mx',x+'px'); stage.style.setProperty('--my',y+'px');
+  $('#dark').style.setProperty('--mx',x+'px'); $('#dark').style.setProperty('--my',y+'px');
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+stage.addEventListener('pointermove',moveLight);
+stage.addEventListener('pointerdown',moveLight);
+
+$('#startBtn').onclick=()=>{
+  $('#intro').style.display='none';
+  initAudio(); if(AC&&AC.state==='suspended') AC.resume();
+  S.started=true; S.t0=Date.now(); S.timer=setInterval(tick,500);
+  setHot(true); renderInv(); updateFear();
+  const r=stage.getBoundingClientRect(); moveLight({clientX:r.left+r.width/2,clientY:r.top+r.height/2});
+  narrate('현관문이 등 뒤에서 철컥, 잠겼다. 손전등 불빛 속에 먼지가 떠다닌다. 어딘가에서 아이 웃음소리가 났다 — 방금.');
+  setTimeout(()=>narrate('출구를 열 방법을 찾자. 조사할 곳에 불빛을 비추고 눌러 보자.'),5500);
+};
+setHot(true); // 인트로 뒤 배경
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&AC&&AC.state==='suspended') AC.resume(); });
+document.addEventListener('gesturestart',e=>e.preventDefault());
+</script>
+</body>
+</html>
